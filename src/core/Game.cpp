@@ -3,6 +3,8 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
 
 namespace papaya {
 
@@ -85,7 +87,6 @@ bool Game::init()
 
 bool Game::create_shader()
 {
-    // Load GLSL source
     std::string vs_src = read_file("assets/shaders/unlit_color.vert");
     std::string fs_src = read_file("assets/shaders/unlit_color.frag");
     if (vs_src.empty() || fs_src.empty()) {
@@ -95,7 +96,6 @@ bool Game::create_shader()
 
     sg_shader_desc sd{};
 
-    // Vertex stage
     sd.vertex_func.source = vs_src.c_str();
     sd.vertex_func.entry  = "main";
 
@@ -105,7 +105,6 @@ bool Game::create_shader()
     sd.uniform_blocks[0].glsl_uniforms[0].glsl_name = "u_mvp";
     sd.uniform_blocks[0].glsl_uniforms[0].type = SG_UNIFORMTYPE_MAT4;
 
-    // Fragment stage
     sd.fragment_func.source = fs_src.c_str();
     sd.fragment_func.entry  = "main";
 
@@ -115,7 +114,6 @@ bool Game::create_shader()
     sd.uniform_blocks[1].glsl_uniforms[0].glsl_name = "u_color";
     sd.uniform_blocks[1].glsl_uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
 
-    // Vertex attribute name (needed for GL backend name lookup)
     sd.attrs[0].glsl_name = "a_pos";
     sd.attrs[0].base_type = SG_SHADERATTRBASETYPE_FLOAT;
 
@@ -132,22 +130,20 @@ bool Game::create_pipelines()
 {
     sg_pipeline_desc pd{};
 
-    // Shared vertex layout
     pd.layout.buffers[0].stride = sizeof(Vertex);
     pd.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT3;
     pd.layout.attrs[0].buffer_index = 0;
     pd.layout.attrs[0].offset = 0;
 
-    // Depth / face culling
     pd.depth.write_enabled = true;
     pd.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
-    pd.cull_mode = SG_CULLMODE_BACK;
     pd.face_winding = SG_FACEWINDING_CCW;
 
     // ── Triangles pipeline ───────────────────────────────────
     pd.shader = m_shader;
     pd.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
     pd.index_type = SG_INDEXTYPE_UINT32;
+    pd.cull_mode = SG_CULLMODE_BACK;
     pd.label = "triangles-pipeline";
     m_pip_triangles = sg_make_pipeline(&pd);
     if (m_pip_triangles.id == SG_INVALID_ID) {
@@ -157,8 +153,7 @@ bool Game::create_pipelines()
 
     // ── Lines pipeline ───────────────────────────────────────
     pd.primitive_type = SG_PRIMITIVETYPE_LINES;
-    pd.index_type = SG_INDEXTYPE_UINT32;
-    pd.cull_mode = SG_CULLMODE_NONE; // lines don't need culling
+    pd.cull_mode = SG_CULLMODE_NONE;
     pd.label = "lines-pipeline";
     m_pip_lines = sg_make_pipeline(&pd);
     if (m_pip_lines.id == SG_INVALID_ID) {
@@ -193,19 +188,34 @@ void Game::update_frame()
 {
     // ── delta time ───────────────────────────────────────────
     uint64_t now = stm_now();
-    double dt = stm_sec(now - m_last_tick);
+    f32 dt = static_cast<f32>(stm_sec(now - m_last_tick));
     m_last_tick = now;
 
-    // ── camera movement ──────────────────────────────────────
+    // ── player movement (relative to camera yaw) ─────────────
     f32 f = 0.0f, r = 0.0f, u = 0.0f;
     if (m_keys_held[SAPP_KEYCODE_W]) f += 1.0f;
     if (m_keys_held[SAPP_KEYCODE_S]) f -= 1.0f;
     if (m_keys_held[SAPP_KEYCODE_A]) r -= 1.0f;
     if (m_keys_held[SAPP_KEYCODE_D]) r += 1.0f;
-    if (m_keys_held[SAPP_KEYCODE_SPACE])    u += 1.0f;
-    if (m_keys_held[SAPP_KEYCODE_LEFT_SHIFT]) u -= 1.0f;
+    if (m_keys_held[SAPP_KEYCODE_SPACE])        u += 1.0f;
+    if (m_keys_held[SAPP_KEYCODE_LEFT_SHIFT])   u -= 1.0f;
 
-    m_camera.move(f, r, u, static_cast<f32>(dt));
+    if (f != 0.0f || r != 0.0f) {
+        Vec3 f_dir{std::sin(m_cam_yaw), 0.0f, std::cos(m_cam_yaw)};
+        Vec3 r_dir{std::cos(m_cam_yaw), 0.0f, -std::sin(m_cam_yaw)};
+        m_player_pos += (f_dir * f + r_dir * r) * m_player_speed * dt;
+    }
+    m_player_pos.y += u * m_player_speed * dt;
+    if (m_player_pos.y < 0.0f) m_player_pos.y = 0.0f;  // keep above ground
+
+    // ── camera orbit ────────────────────────────────────────
+    Vec3 offset;
+    offset.x = m_cam_distance * std::sin(m_cam_yaw) * std::cos(m_cam_pitch);
+    offset.y = m_cam_distance * std::sin(m_cam_pitch);
+    offset.z = m_cam_distance * std::cos(m_cam_yaw) * std::cos(m_cam_pitch);
+
+    Vec3 cam_pos = m_player_pos + offset;
+    m_camera.set_view(glm::lookAt(cam_pos, m_player_pos, Vec3{0.0f, 1.0f, 0.0f}));
 
     // ── draw ─────────────────────────────────────────────────
     sg_pass pass{};
@@ -228,22 +238,23 @@ void Game::update_frame()
     sg_apply_uniforms(1, SG_RANGE(grid_color));
     sg_draw(0, m_grid.num_indices, 1);
 
-    // ── Capsule ──────────────────────────────────────────────
+    // ── Capsule (player) ─────────────────────────────────────
+    Mat4 model = glm::translate(Mat4{1.0f}, m_player_pos);
+    Mat4 mvp   = vp * model;
+
     bind.vertex_buffers[0] = m_capsule.vbuf;
     bind.index_buffer = m_capsule.ibuf;
 
     sg_apply_pipeline(m_pip_triangles);
     sg_apply_bindings(&bind);
 
-    Vec4 capsule_color{0.9f, 0.85f, 0.7f, 1.0f}; // warm white
-    sg_apply_uniforms(0, SG_RANGE(vp));
+    Vec4 capsule_color{0.9f, 0.85f, 0.7f, 1.0f};
+    sg_apply_uniforms(0, SG_RANGE(mvp));
     sg_apply_uniforms(1, SG_RANGE(capsule_color));
     sg_draw(0, m_capsule.num_indices, 1);
 
     sg_end_pass();
     sg_commit();
-
-    (void)dt;
 }
 
 // ── Shutdown ────────────────────────────────────────────────────
@@ -289,10 +300,11 @@ void Game::handle_event(const sapp_event* e)
 
         case SAPP_EVENTTYPE_MOUSE_MOVE:
             if (m_mouse_locked) {
-                m_camera.look(
-                    static_cast<f32>(e->mouse_dy),
-                    static_cast<f32>(e->mouse_dx)
-                );
+                m_cam_yaw   += static_cast<f32>(e->mouse_dx) * m_cam_look_sensitivity;
+                m_cam_pitch += static_cast<f32>(e->mouse_dy) * m_cam_look_sensitivity;
+
+                constexpr f32 PITCH_LIMIT = glm::radians(85.0f);
+                m_cam_pitch = glm::clamp(m_cam_pitch, -PITCH_LIMIT, PITCH_LIMIT);
             }
             break;
 

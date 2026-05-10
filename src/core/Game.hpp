@@ -53,17 +53,27 @@ private:
 
     // ── Shader & pipelines ────────────────────────────────────
     sg_shader   m_shader{};
-    sg_pipeline m_pip_triangles{};  // for solid meshes
-    sg_pipeline m_pip_lines{};      // for wireframe / grid
+    sg_pipeline m_pip_triangles{};
+    sg_pipeline m_pip_lines{};
 
     // ── Scene objects ─────────────────────────────────────────
     Camera m_camera;
     Mesh   m_capsule;
     Mesh   m_grid;
 
+    // ── Player state ──────────────────────────────────────────
+    Vec3 m_player_pos{0.0f, 1.0f, 0.0f};  // centre of capsule
+    f32  m_player_speed{5.0f};
+
+    // ── Camera orbit ──────────────────────────────────────────
+    f32 m_cam_yaw{0.0f};
+    f32 m_cam_pitch{glm::radians(-15.0f)};
+    f32 m_cam_distance{6.0f};
+    f32 m_cam_look_sensitivity{0.003f};
+
     // ── Input state ───────────────────────────────────────────
     std::array<bool, SAPP_KEYCODE_MENU + 1> m_keys_held{};
-    bool m_mouse_locked{false};
+    bool m_mouse_locked{true};
 
     // ── Timing ────────────────────────────────────────────────
     uint64_t m_last_tick{0};
