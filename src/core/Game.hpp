@@ -3,12 +3,16 @@
 
 #include "Types.hpp"
 #include "Log.hpp"
+#include "graphics/Camera.hpp"
+#include "graphics/Mesh.hpp"
 
 #include <sokol_gfx.h>
 #include <sokol_app.h>
 #include <sokol_glue.h>
 #include <sokol_log.h>
 #include <sokol_time.h>
+
+#include <array>
 
 namespace papaya {
 
@@ -20,7 +24,7 @@ public:
     Game();
     ~Game();
 
-    /// Initialise subsystems, sg_setup, pass action.
+    /// Initialise subsystems, shaders, meshes.
     bool init();
 
     /// Called every frame by sapp (frame_cb).
@@ -40,9 +44,28 @@ public:
     Game& operator=(const Game&) = delete;
 
 private:
+    bool create_shader();
+    bool create_pipelines();
+    bool create_scene_meshes();
+
+    // ── Pass action ───────────────────────────────────────────
     sg_pass_action m_pass_action{};
 
-    // Timing
+    // ── Shader & pipelines ────────────────────────────────────
+    sg_shader   m_shader{};
+    sg_pipeline m_pip_triangles{};  // for solid meshes
+    sg_pipeline m_pip_lines{};      // for wireframe / grid
+
+    // ── Scene objects ─────────────────────────────────────────
+    Camera m_camera;
+    Mesh   m_capsule;
+    Mesh   m_grid;
+
+    // ── Input state ───────────────────────────────────────────
+    std::array<bool, SAPP_KEYCODE_MENU + 1> m_keys_held{};
+    bool m_mouse_locked{false};
+
+    // ── Timing ────────────────────────────────────────────────
     uint64_t m_last_tick{0};
 
     static Game* s_instance;
