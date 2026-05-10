@@ -110,11 +110,13 @@ Mesh create_capsule(f32 radius, f32 height, int sectors)
     mesh.prim_type     = SG_PRIMITIVETYPE_TRIANGLES;
 
     sg_buffer_desc vbd{};
-    vbd.data = SG_RANGE(verts);
+    vbd.data.ptr = verts.data();
+    vbd.data.size = verts.size() * sizeof(Vertex);
     mesh.vbuf = sg_make_buffer(&vbd);
 
     sg_buffer_desc ibd{};
-    ibd.data = SG_RANGE(indices);
+    ibd.data.ptr = indices.data();
+    ibd.data.size = indices.size() * sizeof(u32);
     ibd.usage.index_buffer = true;
     mesh.ibuf = sg_make_buffer(&ibd);
 
@@ -156,11 +158,13 @@ Mesh create_grid(f32 size, int divisions)
     mesh.prim_type     = SG_PRIMITIVETYPE_LINES;
 
     sg_buffer_desc vbd{};
-    vbd.data = SG_RANGE(verts);
+    vbd.data.ptr = verts.data();
+    vbd.data.size = verts.size() * sizeof(Vertex);
     mesh.vbuf = sg_make_buffer(&vbd);
 
     sg_buffer_desc ibd{};
-    ibd.data = SG_RANGE(indices);
+    ibd.data.ptr = indices.data();
+    ibd.data.size = indices.size() * sizeof(u32);
     ibd.usage.index_buffer = true;
     mesh.ibuf = sg_make_buffer(&ibd);
 
