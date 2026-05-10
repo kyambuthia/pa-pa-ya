@@ -28,7 +28,7 @@ public:
 private:
     Vec3 m_position{0.0f, 2.0f, 5.0f};
     f32  m_yaw{0.0f};
-    f32  m_pitch{-15.0f};
+    f32  m_pitch{-0.2618f};  // -15° in radians, looking slightly down
 
     f32 m_move_speed{6.0f};
     f32 m_look_sensitivity{0.002f};
