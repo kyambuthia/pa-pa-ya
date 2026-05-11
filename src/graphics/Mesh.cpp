@@ -172,6 +172,52 @@ Mesh create_grid(f32 size, int divisions)
     return mesh;
 }
 
+Mesh create_box(const Vec3& size)
+{
+    const f32 hx = size.x * 0.5f;
+    const f32 hy = size.y * 0.5f;
+    const f32 hz = size.z * 0.5f;
+
+    std::vector<Vertex> verts{
+        {-hx, -hy, -hz},
+        { hx, -hy, -hz},
+        { hx,  hy, -hz},
+        {-hx,  hy, -hz},
+        {-hx, -hy,  hz},
+        { hx, -hy,  hz},
+        { hx,  hy,  hz},
+        {-hx,  hy,  hz},
+    };
+
+    std::vector<u32> indices{
+        0, 2, 1, 0, 3, 2,
+        4, 5, 6, 4, 6, 7,
+        0, 4, 7, 0, 7, 3,
+        1, 2, 6, 1, 6, 5,
+        3, 7, 6, 3, 6, 2,
+        0, 1, 5, 0, 5, 4,
+    };
+
+    Mesh mesh;
+    mesh.num_vertices = static_cast<int>(verts.size());
+    mesh.num_indices = static_cast<int>(indices.size());
+    mesh.prim_type = SG_PRIMITIVETYPE_TRIANGLES;
+
+    sg_buffer_desc vbd{};
+    vbd.data.ptr = verts.data();
+    vbd.data.size = verts.size() * sizeof(Vertex);
+    mesh.vbuf = sg_make_buffer(&vbd);
+
+    sg_buffer_desc ibd{};
+    ibd.data.ptr = indices.data();
+    ibd.data.size = indices.size() * sizeof(u32);
+    ibd.usage.index_buffer = true;
+    mesh.ibuf = sg_make_buffer(&ibd);
+
+    PAPAYA_DEBUG("Box: {} verts, {} indices", mesh.num_vertices, mesh.num_indices);
+    return mesh;
+}
+
 void destroy_mesh(Mesh& mesh)
 {
     if (mesh.vbuf.id != SG_INVALID_ID) sg_destroy_buffer(mesh.vbuf);

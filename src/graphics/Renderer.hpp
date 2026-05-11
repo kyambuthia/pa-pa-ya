@@ -23,13 +23,14 @@ public:
 private:
     bool create_shader();
     bool create_pipelines();
-    bool create_player_mesh();
+    bool create_player_meshes();
 
     sg_pass_action m_pass_action{};
     sg_shader      m_shader{};
     sg_pipeline    m_pip_triangles{};
     sg_pipeline    m_pip_lines{};
-    Mesh           m_player_mesh;
+    Mesh           m_walker_mesh;
+    Mesh           m_vehicle_mesh;
 };
 
 } // namespace papaya

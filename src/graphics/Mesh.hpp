@@ -34,6 +34,10 @@ Mesh create_capsule(f32 radius, f32 height, int sectors = 16);
 /// \param divisions Cells per side
 Mesh create_grid(f32 size, int divisions = 20);
 
+/// Axis-aligned box centered at origin.
+/// \param size Full box dimensions on each axis
+Mesh create_box(const Vec3& size);
+
 /// Free GPU resources for a mesh.
 void destroy_mesh(Mesh& mesh);
 

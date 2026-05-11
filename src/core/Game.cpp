@@ -93,8 +93,9 @@ void Game::update_frame()
     offset.y = m_cam_distance * std::sin(m_cam_pitch);
     offset.z = m_cam_distance * std::cos(m_cam_yaw) * std::cos(m_cam_pitch);
 
-    Vec3 cam_pos = m_player.position() + offset;
-    m_camera.set_view(glm::lookAt(cam_pos, m_player.position(), Vec3{0.0f, 1.0f, 0.0f}));
+    Vec3 focus_pos = m_player.focus_position();
+    Vec3 cam_pos = focus_pos + offset;
+    m_camera.set_view(glm::lookAt(cam_pos, focus_pos, Vec3{0.0f, 1.0f, 0.0f}));
 
     m_renderer.draw(m_camera, m_world, m_player);
 }
@@ -123,6 +124,9 @@ void Game::handle_event(const sapp_event* e)
             }
             if (e->key_code == SAPP_KEYCODE_ESCAPE) {
                 sapp_request_quit();
+            }
+            if (e->key_code == SAPP_KEYCODE_F && !e->key_repeat) {
+                m_player.toggle_mode();
             }
             if (e->key_code == SAPP_KEYCODE_TAB) {
                 m_mouse_locked = !m_mouse_locked;

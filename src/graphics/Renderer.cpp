@@ -33,7 +33,7 @@ bool Renderer::init()
 {
     if (!create_shader()) return false;
     if (!create_pipelines()) return false;
-    if (!create_player_mesh()) return false;
+    if (!create_player_meshes()) return false;
 
     return true;
 }
@@ -117,11 +117,17 @@ bool Renderer::create_pipelines()
     return true;
 }
 
-bool Renderer::create_player_mesh()
+bool Renderer::create_player_meshes()
 {
-    m_player_mesh = create_capsule(0.5f, 2.0f, 16);
-    if (m_player_mesh.vbuf.id == SG_INVALID_ID || m_player_mesh.ibuf.id == SG_INVALID_ID) {
-        PAPAYA_ERROR("Failed to create capsule mesh");
+    m_walker_mesh = create_capsule(0.5f, 2.0f, 16);
+    if (m_walker_mesh.vbuf.id == SG_INVALID_ID || m_walker_mesh.ibuf.id == SG_INVALID_ID) {
+        PAPAYA_ERROR("Failed to create walker capsule mesh");
+        return false;
+    }
+
+    m_vehicle_mesh = create_box(Vec3{1.8f, 0.8f, 2.6f});
+    if (m_vehicle_mesh.vbuf.id == SG_INVALID_ID || m_vehicle_mesh.ibuf.id == SG_INVALID_ID) {
+        PAPAYA_ERROR("Failed to create vehicle box mesh");
         return false;
     }
 
@@ -149,18 +155,33 @@ void Renderer::draw(const Camera& camera, const World& world, const Player& play
     sg_apply_uniforms(1, SG_RANGE(grid_color));
     sg_draw(0, world.grid().num_indices, 1);
 
-    Mat4 mvp = vp * player.model_matrix();
+    const f32 vehicle_blend = player.vehicle_blend();
 
-    bind.vertex_buffers[0] = m_player_mesh.vbuf;
-    bind.index_buffer = m_player_mesh.ibuf;
+    auto draw_form = [&](const Mesh& mesh, const Mat4& model, const Vec4& color) {
+        Mat4 mvp = vp * model;
+        bind.vertex_buffers[0] = mesh.vbuf;
+        bind.index_buffer = mesh.ibuf;
 
-    sg_apply_pipeline(m_pip_triangles);
-    sg_apply_bindings(&bind);
+        sg_apply_pipeline(m_pip_triangles);
+        sg_apply_bindings(&bind);
+        sg_apply_uniforms(0, SG_RANGE(mvp));
+        sg_apply_uniforms(1, SG_RANGE(color));
+        sg_draw(0, mesh.num_indices, 1);
+    };
 
-    Vec4 capsule_color{0.9f, 0.85f, 0.7f, 1.0f};
-    sg_apply_uniforms(0, SG_RANGE(mvp));
-    sg_apply_uniforms(1, SG_RANGE(capsule_color));
-    sg_draw(0, m_player_mesh.num_indices, 1);
+    if (vehicle_blend < 0.99f) {
+        const f32 walker_scale = (vehicle_blend <= 0.01f) ? 1.0f : glm::mix(1.0f, 0.35f, vehicle_blend);
+        Mat4 walker_model = player.render_matrix(PlayerMode::Walker);
+        walker_model = walker_model * glm::scale(Mat4{1.0f}, Vec3{walker_scale, walker_scale, walker_scale});
+        draw_form(m_walker_mesh, walker_model, Vec4{0.9f, 0.85f, 0.7f, 1.0f});
+    }
+
+    if (vehicle_blend > 0.01f) {
+        const f32 vehicle_scale = (vehicle_blend >= 0.99f) ? 1.0f : glm::mix(0.35f, 1.0f, vehicle_blend);
+        Mat4 vehicle_model = player.render_matrix(PlayerMode::Vehicle);
+        vehicle_model = vehicle_model * glm::scale(Mat4{1.0f}, Vec3{vehicle_scale, vehicle_scale, vehicle_scale});
+        draw_form(m_vehicle_mesh, vehicle_model, Vec4{0.35f, 0.65f, 0.95f, 1.0f});
+    }
 
     sg_end_pass();
     sg_commit();
@@ -168,7 +189,8 @@ void Renderer::draw(const Camera& camera, const World& world, const Player& play
 
 void Renderer::shutdown()
 {
-    destroy_mesh(m_player_mesh);
+    destroy_mesh(m_walker_mesh);
+    destroy_mesh(m_vehicle_mesh);
 
     if (m_pip_triangles.id != SG_INVALID_ID) sg_destroy_pipeline(m_pip_triangles);
     if (m_pip_lines.id != SG_INVALID_ID)     sg_destroy_pipeline(m_pip_lines);
