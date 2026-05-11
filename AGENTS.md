@@ -24,7 +24,7 @@ Repository-specific guidance for coding agents working on `pa-pa-ya`.
 - `src/core/Game.*`
   - Owns app lifecycle orchestration, per-frame high-level flow, input handling, and camera orbit state.
 - `src/gameplay/Player.*`
-  - Owns local player movement state and player model transform generation.
+  - Owns local player movement state, walker/vehicle transform state, and player model transform generation.
 - `src/graphics/Camera.*`
   - Owns projection/view matrix storage and perspective setup.
 - `src/graphics/Renderer.*`
@@ -39,9 +39,11 @@ Repository-specific guidance for coding agents working on `pa-pa-ya`.
 ## 3) Current runtime behavior (verified)
 
 - The current slice renders a grid and a capsule player mesh.
+- The current slice renders a grid plus walker/vehicle placeholder player forms.
 - Movement:
   - `WASD` moves relative to camera yaw.
   - `Space` / `Left Shift` move vertically.
+  - `F` toggles between walker and vehicle mode.
 - Camera:
   - Mouse movement orbits the camera when the mouse is locked.
   - `Tab` toggles mouse lock.
@@ -86,12 +88,12 @@ cmake --build build
 
 ## 7) Local reference notes
 
-- `docs/notes/` is local-only reference material and is ignored by git.
+- Local reference notes for this repo now live outside the repository at `~/game-projects-notes/pa-pa-ya/`.
 - Current note topics are:
-  - `docs/notes/engine/`
-  - `docs/notes/rendering/`
-  - `docs/notes/graphics/`
-  - `docs/notes/architecture/`
+  - `~/game-projects-notes/pa-pa-ya/engine/`
+  - `~/game-projects-notes/pa-pa-ya/rendering/`
+  - `~/game-projects-notes/pa-pa-ya/graphics/`
+  - `~/game-projects-notes/pa-pa-ya/architecture/`
 - Use those files for guidance, not as text to copy into the repository.
 - Do not commit, redistribute, or quote large passages from those notes. Several of those files include explicit copyright / no-reproduction notices.
 - Summarize ideas in original project-specific language.
@@ -102,7 +104,7 @@ cmake --build build
 - If configure state is stale or missing, run `cmake -S . -B build` first.
 - If you change runtime behavior, say exactly how it was verified.
 - If runtime behavior was not exercised, say so explicitly.
-- Do not modify `docs/notes/` unless the user asks.
+- Do not modify the external notes workspace unless the user asks.
 
 ## 9) Near-term bias
 

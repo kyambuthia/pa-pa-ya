@@ -7,10 +7,11 @@ The long-term target is a persistent online science-fiction world built around a
 ## Current prototype
 
 - flat grid world slice
-- capsule player mesh
+- walker/vehicle placeholder transformation using simple procedural meshes
 - third-person orbit camera
 - `WASD` movement relative to camera yaw
 - `Space` / `Left Shift` vertical movement
+- `F` toggles between walker and vehicle mode
 - `Tab` toggles mouse lock
 - `Escape` requests quit
 
